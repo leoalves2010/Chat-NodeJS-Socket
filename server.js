@@ -14,13 +14,33 @@ app.use(express.static(path.join(__dirname, 'public')));
 let connectedUsers = [];
 
 io.on("connection", (socket) => {
-    console.log("Conectado no Socket");
-
     socket.on('join-request', (user) => {
         socket.username = user.name;
         connectedUsers.push(user);
 
         socket.emit('user-ok', connectedUsers);
-        socket.broadcast.emit('user-ok', connectedUsers);
+        socket.broadcast.emit('list-update', {
+            joined: user.name,
+            list: connectedUsers
+        });
+    });
+
+    socket.on('disconnect', () => {
+        connectedUsers = connectedUsers.filter(user => user.name !== socket.username);
+        socket.broadcast.emit('list-update', {
+            leave: socket.username,
+            list: connectedUsers
+        });
+    });
+
+    socket.on('send-msg', (user) => {
+        let userObj = {
+            name: socket.username,
+            msg: user.msg,
+            avatar: user.avatar
+        };
+
+        socket.emit('show-msg', userObj);
+        socket.broadcast.emit('show-msg', userObj);
     });
 });
